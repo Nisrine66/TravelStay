@@ -6,7 +6,8 @@ const Listings = () => {
   const [properties, setProperties] = useState([])
   const [priceRange, setPriceRange] = useState([0, 300])
   const [roomType, setRoomType] = useState('all')
-  const [minNights, setMinNights] = useState(0)
+  const [minNights, setMinNights] = useState(1)
+  const [minNightsError, setMinNightsError] = useState('')
 
   useEffect(() => {
     // Mock data - would be fetched from API
@@ -102,11 +103,31 @@ const Listings = () => {
     ])
   }, [])
 
+  const validateMinNights = (value) => {
+    const numValue = parseInt(value)
+    if (isNaN(numValue) || numValue < 1) {
+      setMinNightsError('Minimum nights must be at least 1')
+      return false
+    } else if (numValue > 20) {
+      setMinNightsError('Minimum nights cannot exceed 20')
+      return false
+    } else {
+      setMinNightsError('')
+      return true
+    }
+  }
+
+  const handleMinNightsChange = (e) => {
+    const value = e.target.value
+    setMinNights(value === '' ? '' : parseInt(value))
+    validateMinNights(value)
+  }
+
   const filteredProperties = properties.filter((prop) => {
     const priceMatch = prop.price >= priceRange[0] && prop.price <= priceRange[1]
     const roomMatch = roomType === 'all' || prop.roomType.toLowerCase().includes(roomType.toLowerCase())
-    const nightsMatch = prop.minNights <= minNights || minNights === 0
-    return priceMatch && roomMatch && nightsMatch
+    const nightsMatch = prop.minNights <= minNights || minNights === 0 || minNights === ''
+    return priceMatch && roomMatch && nightsMatch && !minNightsError
   })
 
   return (
@@ -181,12 +202,17 @@ const Listings = () => {
                   <label className="text-sm font-medium text-text">Minimum Nights</label>
                   <input
                     type="number"
-                    min="0"
-                    max="30"
+                    min="1"
+                    max="20"
                     value={minNights}
-                    onChange={(e) => setMinNights(parseInt(e.target.value))}
-                    className="input-glass w-full text-sm"
+                    onChange={handleMinNightsChange}
+                    className={`input-glass w-full text-sm ${
+                      minNightsError ? 'border-red-500 focus:border-red-500' : ''
+                    }`}
                   />
+                  {minNightsError && (
+                    <p className="text-xs text-red-500 mt-1">{minNightsError}</p>
+                  )}
                 </div>
 
                 {/* Reset Button */}
@@ -194,7 +220,8 @@ const Listings = () => {
                   onClick={() => {
                     setPriceRange([0, 300])
                     setRoomType('all')
-                    setMinNights(0)
+                    setMinNights(1)
+                    setMinNightsError('')
                   }}
                   className="btn-secondary w-full text-sm"
                 >

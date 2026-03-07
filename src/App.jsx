@@ -15,6 +15,7 @@ import Home from './pages/Home'
 import Listings from './pages/Listings'
 import PricePredictor from './pages/PricePredictor'
 import Profile from './pages/Profile'
+import Chat from './pages/Chat'
 import NotFound from './pages/NotFound'
 
 // App Router Component
@@ -59,6 +60,14 @@ const AppRouter = () => {
         element={
           <ProtectedRoute>
             <PricePredictor />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute>
+            <Chat />
           </ProtectedRoute>
         }
       />

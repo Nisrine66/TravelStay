@@ -8,10 +8,10 @@ export const Logo = ({ size = 'md', showText = false }) => {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <img src="/logo.png" alt="MyHousing Logo" className={`${sizeMap[size]} rounded-full object-cover flex-shrink-0`} />
+      <img src="/logo.png" alt="TravelStay Logo" className={`${sizeMap[size]} rounded-full object-cover flex-shrink-0`} />
       {showText && (
         <div className="text-center">
-          <p className="text-xs font-bold text-accent-primary">MyHousing</p>
+          <p className="text-xs font-bold text-accent-primary">TravelStay</p>
         </div>
       )}
     </div>

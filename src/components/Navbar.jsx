@@ -1,7 +1,7 @@
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useState } from 'react'
-import { LogOut, Menu, X } from 'lucide-react'
+import { LogOut, Menu, X, MessageSquare } from 'lucide-react'
 import Logo from './Logo'
 
 export const Navbar = () => {
@@ -15,6 +15,7 @@ export const Navbar = () => {
     { name: 'Home', path: '/' },
     { name: 'Listings', path: '/listings' },
     { name: 'Price Predictor', path: '/price-predictor' },
+    { name: 'Chat with TravelStay', path: '/chat' },
     { name: 'Profile', path: '/profile' }
   ]
 

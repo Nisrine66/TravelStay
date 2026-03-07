@@ -11,6 +11,7 @@ const Profile = () => {
     budget: [40, 250],
     amenities: ['wifi', 'kitchen', 'ac', 'pool']
   })
+  const [budgetError, setBudgetError] = useState('')
 
   const roomTypeOptions = [
     { id: 'apartment', label: 'Entire Apartment' },
@@ -38,6 +39,40 @@ const Profile = () => {
     { label: 'Wishlist Items', value: '24' },
     { label: 'Reviews Given', value: '11' }
   ]
+
+  const validateBudgetRange = (min, max) => {
+    if (min >= max) {
+      setBudgetError('Maximum budget must be greater than minimum budget')
+      return false
+    } else {
+      setBudgetError('')
+      return true
+    }
+  }
+
+  const handleMinBudgetChange = (e) => {
+    const newMin = parseInt(e.target.value)
+    const currentMax = preferences.budget[1]
+    
+    setPreferences(prev => ({
+      ...prev,
+      budget: [newMin, currentMax]
+    }))
+    
+    validateBudgetRange(newMin, currentMax)
+  }
+
+  const handleMaxBudgetChange = (e) => {
+    const newMax = parseInt(e.target.value)
+    const currentMin = preferences.budget[0]
+    
+    setPreferences(prev => ({
+      ...prev,
+      budget: [currentMin, newMax]
+    }))
+    
+    validateBudgetRange(currentMin, newMax)
+  }
 
   const toggleAmenity = (id) => {
     setPreferences(prev => ({
@@ -176,11 +211,10 @@ const Profile = () => {
                       min="0"
                       max="500"
                       value={preferences.budget[0]}
-                      onChange={(e) => setPreferences(prev => ({
-                        ...prev,
-                        budget: [parseInt(e.target.value), prev.budget[1]]
-                      }))}
-                      className="w-full h-2 bg-dark-hover rounded-lg appearance-none cursor-pointer"
+                      onChange={handleMinBudgetChange}
+                      className={`w-full h-2 bg-dark-hover rounded-lg appearance-none cursor-pointer ${
+                        budgetError ? 'border-red-500' : ''
+                      }`}
                     />
                   </div>
 
@@ -191,16 +225,21 @@ const Profile = () => {
                       min="0"
                       max="500"
                       value={preferences.budget[1]}
-                      onChange={(e) => setPreferences(prev => ({
-                        ...prev,
-                        budget: [prev.budget[0], parseInt(e.target.value)]
-                      }))}
-                      className="w-full h-2 bg-dark-hover rounded-lg appearance-none cursor-pointer"
+                      onChange={handleMaxBudgetChange}
+                      className={`w-full h-2 bg-dark-hover rounded-lg appearance-none cursor-pointer ${
+                        budgetError ? 'border-red-500' : ''
+                      }`}
                     />
                   </div>
 
-                  <div className="bg-accent-primary/10 border border-accent-primary/20 rounded-lg p-3 text-sm">
-                    <p className="text-text font-semibold">${preferences.budget[0]} - ${preferences.budget[1]} per night</p>
+                  <div className={`bg-accent-primary/10 border rounded-lg p-3 text-sm ${
+                    budgetError ? 'border-red-500 bg-red-500/10' : 'border-accent-primary/20'
+                  }`}>
+                    <p className={`font-semibold ${
+                      budgetError ? 'text-red-500' : 'text-text'
+                    }`}>
+                      {budgetError || `$${preferences.budget[0]} - $${preferences.budget[1]} per night`}
+                    </p>
                   </div>
                 </div>
               </div>

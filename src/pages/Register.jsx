@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { useAuth } from '../context/AuthContext'
 import Toast from '../components/Toast'
 import Logo from '../components/Logo'
-import { User, Mail, Lock, CheckCircle2, ArrowRight } from 'lucide-react'
+import { User, Mail, Lock, CheckCircle2, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { register as registerUser } from '../api/auth'
 
 export const Register = () => {
@@ -13,6 +13,8 @@ export const Register = () => {
   const { register, handleSubmit, formState: { errors }, watch } = useForm()
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const password = watch('password')
 
@@ -106,18 +108,27 @@ export const Register = () => {
               <Lock className="w-4 h-4 text-accent-primary" />
               Password
             </label>
-            <input
-              {...register('password', {
-                required: 'Password is required',
-                minLength: {
-                  value: 8,
-                  message: 'Password must be at least 8 characters'
-                }
-              })}
-              type="password"
-              placeholder="At least 8 characters"
-              className="input-glass"
-            />
+            <div className="relative">
+              <input
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: {
+                    value: 8,
+                    message: 'Password must be at least 8 characters'
+                  }
+                })}
+                type={showPassword ? 'text' : 'password'}
+                placeholder="At least 8 characters"
+                className="input-glass pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-text transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
             {errors.password && <p className="error-message">{errors.password.message}</p>}
           </div>
 
@@ -127,15 +138,24 @@ export const Register = () => {
               <CheckCircle2 className="w-4 h-4 text-accent-primary" />
               Confirm Password
             </label>
-            <input
-              {...register('password_confirmation', {
-                required: 'Confirm your password',
-                validate: (value) => value === password || 'Passwords do not match'
-              })}
-              type="password"
-              placeholder="Confirm password"
-              className="input-glass"
-            />
+            <div className="relative">
+              <input
+                {...register('password_confirmation', {
+                  required: 'Confirm your password',
+                  validate: (value) => value === password || 'Passwords do not match'
+                })}
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirm password"
+                className="input-glass pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted hover:text-text transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
             {errors.password_confirmation && (
               <p className="error-message">{errors.password_confirmation.message}</p>
             )}

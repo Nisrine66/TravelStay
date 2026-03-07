@@ -56,13 +56,6 @@ const Home = () => {
     ])
   }, [])
 
-  const destinations = [
-    { name: 'Thailand', count: 1200, color: 'from-blue-500 to-cyan-500' },
-    { name: 'Japan', count: 856, color: 'from-purple-500 to-pink-500' },
-    { name: 'Mexico', count: 724, color: 'from-orange-500 to-red-500' },
-    { name: 'Portugal', count: 645, color: 'from-yellow-500 to-orange-500' }
-  ]
-
   const features = [
     {
       icon: <Zap className="w-8 h-8" />,
@@ -97,7 +90,7 @@ const Home = () => {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16 animate-fade-in">
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-text mb-4">
-                Welcome to <span className="text-gradient">TravelStay</span>
+                Welcome to <span className="text-gradient">aTravelStay</span>
               </h1>
               <p className="text-lg text-muted max-w-2xl mx-auto mb-8">
                 Discover amazing properties and get fair prices with AI-powered insights
@@ -114,6 +107,13 @@ const Home = () => {
                   className="btn-secondary text-center"
                 >
                   Predict Price
+                </Link>
+                <Link
+                  to="/chat"
+                  className="btn-accent text-center flex items-center justify-center gap-2"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  Chat with TravelStay
                 </Link>
               </div>
             </div>
@@ -171,28 +171,9 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Favorite Destinations */}
-            <div className="mb-16 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-              <h2 className="text-2xl sm:text-3xl font-bold text-text mb-8">Your Favorite Destinations</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {destinations.map((dest, idx) => (
-                  <div
-                    key={idx}
-                    className={`relative overflow-hidden rounded-2xl h-40 cursor-pointer group card-glass`}
-                  >
-                    <div className={`absolute inset-0 bg-gradient-to-br ${dest.color} opacity-30 group-hover:opacity-40 transition`}></div>
-                    <div className="relative h-full flex flex-col justify-end p-6 backdrop-blur-sm">
-                      <h3 className="text-xl font-bold text-white mb-2">{dest.name}</h3>
-                      <p className="text-white/80 text-sm">{dest.count} properties</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Features */}
             <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-              <h2 className="text-2xl sm:text-3xl font-bold text-text mb-8">Why Choose TravelStay</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-text mb-8">Why Choose aTravelStay</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {features.map((feature, idx) => (
                   <div key={idx} className="card-glass p-6 space-y-4">
@@ -213,7 +194,7 @@ const Home = () => {
           <div className="max-w-7xl mx-auto px-4 py-12">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 mb-8">
               <div>
-                <h4 className="font-bold text-text mb-4">About TravelStay</h4>
+                <h4 className="font-bold text-text mb-4">About aTravelStay</h4>
                 <ul className="space-y-2 text-sm text-muted">
                   <li><a href="#" className="hover:text-accent-primary transition">Our Story</a></li>
                   <li><a href="#" className="hover:text-accent-primary transition">Careers</a></li>
@@ -246,7 +227,7 @@ const Home = () => {
               </div>
             </div>
             <div className="border-t border-white/5 pt-8 text-center text-sm text-muted">
-              <p>&copy; 2026 TravelStay. All rights reserved.</p>
+              <p>&copy; 2026 aTravelStay. All rights reserved.</p>
             </div>
           </div>
         </footer>

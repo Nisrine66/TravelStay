@@ -11,6 +11,7 @@ const PricePredictor = () => {
     bathrooms: '1',
     amenities: ['wifi', 'kitchen']
   })
+  const [errors, setErrors] = useState({})
   const [prediction, setPrediction] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -31,12 +32,61 @@ const PricePredictor = () => {
     { id: 'washer', label: 'Washer' }
   ]
 
+  const validateForm = () => {
+    const newErrors = {}
+    
+    // Location validation - should only be characters, no numbers
+    if (!formData.location.trim()) {
+      newErrors.location = 'Location is required'
+    } else if (/\d/.test(formData.location)) {
+      newErrors.location = 'Location should only contain letters and spaces, not numbers'
+    } else if (!/^[a-zA-Z\s,.-]+$/.test(formData.location)) {
+      newErrors.location = 'Location should only contain letters, spaces, commas, dots and hyphens'
+    } else if (formData.location.trim().length < 2) {
+      newErrors.location = 'Location must be at least 2 characters'
+    }
+    
+    // Guests validation - should be between 1 and 20
+    const guests = parseInt(formData.guests)
+    if (!guests || guests <= 0) {
+      newErrors.guests = 'Number of guests must be greater than 0'
+    } else if (guests > 20) {
+      newErrors.guests = 'Number of guests cannot exceed 20'
+    }
+    
+    // Bedrooms validation - should be between 1 and 20
+    const bedrooms = parseInt(formData.bedrooms)
+    if (!bedrooms || bedrooms <= 0) {
+      newErrors.bedrooms = 'Number of bedrooms must be greater than 0'
+    } else if (bedrooms > 20) {
+      newErrors.bedrooms = 'Number of bedrooms cannot exceed 20'
+    }
+    
+    // Bathrooms validation - should be between 1 and 10
+    const bathrooms = parseInt(formData.bathrooms)
+    if (!bathrooms || bathrooms <= 0) {
+      newErrors.bathrooms = 'Number of bathrooms must be greater than 0'
+    } else if (bathrooms > 10) {
+      newErrors.bathrooms = 'Number of bathrooms cannot exceed 10'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
       [name]: value
     }))
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }))
+    }
   }
 
   const toggleAmenity = (id) => {
@@ -50,6 +100,11 @@ const PricePredictor = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    if (!validateForm()) {
+      return
+    }
+    
     setLoading(true)
 
     // Simulate API call
@@ -110,8 +165,13 @@ const PricePredictor = () => {
                     value={formData.location}
                     onChange={handleChange}
                     placeholder="e.g., New York, USA"
-                    className="input-glass w-full"
+                    className={`input-glass w-full ${
+                      errors.location ? 'border-red-500 focus:border-red-500' : ''
+                    }`}
                   />
+                  {errors.location && (
+                    <p className="text-xs text-red-500 mt-1">{errors.location}</p>
+                  )}
                 </div>
 
                 {/* Room Type */}
@@ -140,8 +200,13 @@ const PricePredictor = () => {
                       onChange={handleChange}
                       min="1"
                       max="20"
-                      className="input-glass w-full"
+                      className={`input-glass w-full ${
+                        errors.guests ? 'border-red-500 focus:border-red-500' : ''
+                      }`}
                     />
+                    {errors.guests && (
+                      <p className="text-xs text-red-500 mt-1">{errors.guests}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-text">Bedrooms</label>
@@ -150,10 +215,15 @@ const PricePredictor = () => {
                       name="bedrooms"
                       value={formData.bedrooms}
                       onChange={handleChange}
-                      min="0"
-                      max="10"
-                      className="input-glass w-full"
+                      min="1"
+                      max="20"
+                      className={`input-glass w-full ${
+                        errors.bedrooms ? 'border-red-500 focus:border-red-500' : ''
+                      }`}
                     />
+                    {errors.bedrooms && (
+                      <p className="text-xs text-red-500 mt-1">{errors.bedrooms}</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-text">Bathrooms</label>
@@ -162,10 +232,15 @@ const PricePredictor = () => {
                       name="bathrooms"
                       value={formData.bathrooms}
                       onChange={handleChange}
-                      min="0"
+                      min="1"
                       max="10"
-                      className="input-glass w-full"
+                      className={`input-glass w-full ${
+                        errors.bathrooms ? 'border-red-500 focus:border-red-500' : ''
+                      }`}
                     />
+                    {errors.bathrooms && (
+                      <p className="text-xs text-red-500 mt-1">{errors.bathrooms}</p>
+                    )}
                   </div>
                 </div>
 
@@ -193,7 +268,7 @@ const PricePredictor = () => {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={loading || !formData.location}
+                  disabled={loading || !formData.location || Object.keys(errors).length > 0}
                   className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Zap className="w-4 h-4" />
@@ -259,6 +334,7 @@ const PricePredictor = () => {
                   <button
                     onClick={() => {
                       setPrediction(null)
+                      setErrors({})
                       setFormData({
                         location: '',
                         roomType: 'entire',

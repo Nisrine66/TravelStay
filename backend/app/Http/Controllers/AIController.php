@@ -23,7 +23,13 @@ class AIController extends Controller
 
     public function destination(Request $request)
     {
-        $response = Http::post("{$this->!qaflaskUrl}/destination", $request->all());
+        $response = Http::post("{$this->flaskUrl}/destination", $request->all());
+        return response()->json($response->json());
+    }
+
+    public function topListings()
+    {
+        $response = Http::get("{$this->flaskUrl}/top-listings");
         return response()->json($response->json());
     }
 }

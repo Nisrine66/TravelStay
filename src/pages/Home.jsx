@@ -3,57 +3,98 @@ import { Link } from 'react-router-dom'
 import { Star, MapPin, Users, Zap, Home as HomeIcon, Brain, MessageSquare } from 'lucide-react'
 import Navbar from '../components/Navbar'
 
+const CITY_IMAGES = {
+  London: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500&h=300&fit=crop',
+  Barcelona: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=500&h=300&fit=crop',
+  Edinburgh: 'Edinburgh.jpg',
+  Madrid: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=500&h=300&fit=crop',
+  Lyon: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=500&h=300&fit=crop',
+  Paris: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=500&h=300&fit=crop',
+}
+
+const FALLBACK_PROPERTIES = [
+  {
+    id: 1,
+    title: 'Stunning, Dbl En Suite in Grade II Georgian Home',
+    location: 'London',
+    comfortScore: 95,
+    rating: 5.0,
+    reviews: 506,
+    price: 126,
+    roomType: 'Private room',
+    image: CITY_IMAGES['London']
+  },
+  {
+    id: 2,
+    title: 'Central luxury penthouse with huge private terrace',
+    location: 'Barcelona',
+    comfortScore: 92,
+    rating: 5.0,
+    reviews: 358,
+    price: 658,
+    roomType: 'Entire home/apt',
+    image: CITY_IMAGES['Barcelona']
+  },
+  {
+    id: 3,
+    title: 'Sunny attic floor in family home',
+    location: 'Edinburgh',
+    comfortScore: 90,
+    rating: 5.0,
+    reviews: 340,
+    price: 80,
+    roomType: 'Private room',
+    image: CITY_IMAGES['Edinburgh']
+  },
+  {
+    id: 4,
+    title: '5-star short-term rental apartment at Plaza Mayor',
+    location: 'Madrid',
+    comfortScore: 91,
+    rating: 5.0,
+    reviews: 323,
+    price: 433,
+    roomType: 'Entire home/apt',
+    image: CITY_IMAGES['Madrid']
+  }
+]
+
 const Home = () => {
   const [properties, setProperties] = useState([])
+  const [loadingProperties, setLoadingProperties] = useState(true)
 
   useEffect(() => {
-    // Mock property data
-    setProperties([
-      {
-        id: 1,
-        title: 'Cozy Beach Bungalow',
-        location: 'Bali, Indonesia',
-        comfortScore: 95,
-        rating: 4.9,
-        reviews: 234,
-        price: 85,
-        roomType: 'Entire bungalow',
-        image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&h=300&fit=crop'
-      },
-      {
-        id: 2,
-        title: 'Modern City Apartment',
-        location: 'New York, USA',
-        comfortScore: 88,
-        rating: 4.8,
-        reviews: 512,
-        price: 150,
-        roomType: 'Entire apartment',
-        image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=300&fit=crop'
-      },
-      {
-        id: 3,
-        title: 'Mountain Cabin Retreat',
-        location: 'Colorado, USA',
-        comfortScore: 92,
-        rating: 4.9,
-        reviews: 189,
-        price: 120,
-        roomType: 'Entire cabin',
-        image: 'https://images.unsplash.com/photo-1449844908441-8829872d2607?w=500&h=300&fit=crop'
-      },
-      {
-        id: 4,
-        title: 'Parisian Studio',
-        location: 'Paris, France',
-        comfortScore: 87,
-        rating: 4.7,
-        reviews: 456,
-        price: 95,
-        roomType: 'Entire studio',
-        image: 'https://images.unsplash.com/photo-1480074568708-e7b720bb3f5d?w=500&h=300&fit=crop'
+    const fetchTopListings = async () => {
+      try {
+        setLoadingProperties(true)
+        const response = await fetch('http://127.0.0.1:8000/api/top-listings')
+        const data = await response.json()
+
+        if (data.listings && data.listings.length > 0) {
+          const mapped = data.listings.map((listing, idx) => ({
+            id: idx + 1,
+            title: listing.name,
+            location: listing.city,
+            comfortScore: Math.round((listing.bedrooms + 1) * 10 + listing.rating * 10),
+            rating: listing.rating,
+            reviews: listing.reviews,
+            price: listing.price,
+            roomType: listing.room_type,
+            image: CITY_IMAGES[listing.city] || CITY_IMAGES['Paris']
+          }))
+          setProperties(mapped)
+        } else {
+          setProperties(FALLBACK_PROPERTIES)
+        }
+      } catch (error) {
+        console.error('Failed to fetch top listings:', error)
+        setProperties(FALLBACK_PROPERTIES)
+      } finally {
+        setLoadingProperties(false)
       }
-    ])
+    }
+
+    fetchTopListings()
   }, [])
 
   const features = [
@@ -96,16 +137,10 @@ const Home = () => {
                 Discover amazing properties and get fair prices with AI-powered insights
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link
-                  to="/listings"
-                  className="btn-primary text-center"
-                >
+                <Link to="/listings" className="btn-primary text-center">
                   Browse Listings
                 </Link>
-                <Link
-                  to="/price-predictor"
-                  className="btn-secondary text-center"
-                >
+                <Link to="/price-predictor" className="btn-secondary text-center">
                   Predict Price
                 </Link>
                 <Link
@@ -121,54 +156,70 @@ const Home = () => {
             {/* Recommended Properties */}
             <div className="mb-16 animate-slide-up">
               <h2 className="text-2xl sm:text-3xl font-bold text-text mb-8">Recommended for You</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {properties.map((property) => (
-                  <div
-                    key={property.id}
-                    className="group card-glass overflow-hidden hover:border-accent-primary/50 transition cursor-pointer"
-                  >
-                    {/* Image */}
-                    <div className="relative h-48 overflow-hidden">
-                      <img
-                        src={property.image}
-                        alt={property.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
-                      />
-                      {/* Comfort Score Badge */}
-                      <div className="absolute top-3 right-3 bg-gradient-to-br from-accent-primary to-accent-secondary text-white px-3 py-1 rounded-full text-xs font-semibold">
-                        ✨ {property.comfortScore}%
+
+              {loadingProperties ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="card-glass overflow-hidden animate-pulse">
+                      <div className="h-48 bg-white/5"></div>
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 bg-white/5 rounded w-3/4"></div>
+                        <div className="h-3 bg-white/5 rounded w-1/2"></div>
+                        <div className="h-3 bg-white/5 rounded w-1/3"></div>
                       </div>
                     </div>
-
-                    {/* Content */}
-                    <div className="p-4 space-y-3">
-                      <h3 className="font-semibold text-text group-hover:text-accent-primary transition">
-                        {property.title}
-                      </h3>
-                      <div className="flex items-center gap-2 text-sm text-muted">
-                        <MapPin className="w-4 h-4" />
-                        {property.location}
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {properties.map((property) => (
+                    <div
+                      key={property.id}
+                      className="group card-glass overflow-hidden hover:border-accent-primary/50 transition cursor-pointer"
+                    >
+                      {/* Image */}
+                      <div className="relative h-48 overflow-hidden">
+                        <img
+                          src={property.image}
+                          alt={property.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition duration-300"
+                        />
+                        {/* Comfort Score Badge */}
+                        <div className="absolute top-3 right-3 bg-gradient-to-br from-accent-primary to-accent-secondary text-white px-3 py-1 rounded-full text-xs font-semibold">
+                          ✨ {property.comfortScore}%
+                        </div>
                       </div>
 
-                      {/* Rating */}
-                      <div className="flex items-center gap-2 text-sm">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-text font-medium">{property.rating}</span>
-                        <span className="text-muted">({property.reviews})</span>
-                      </div>
+                      {/* Content */}
+                      <div className="p-4 space-y-3">
+                        <h3 className="font-semibold text-text group-hover:text-accent-primary transition line-clamp-2">
+                          {property.title}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-muted">
+                          <MapPin className="w-4 h-4" />
+                          {property.location}
+                        </div>
 
-                      {/* Room Type */}
-                      <p className="text-xs text-accent-secondary">{property.roomType}</p>
+                        {/* Rating */}
+                        <div className="flex items-center gap-2 text-sm">
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-text font-medium">{property.rating}</span>
+                          <span className="text-muted">({property.reviews})</span>
+                        </div>
 
-                      {/* Price */}
-                      <div className="flex items-baseline gap-1 pt-2 border-t border-white/5">
-                        <span className="text-2xl font-bold text-text">${property.price}</span>
-                        <span className="text-muted">/night</span>
+                        {/* Room Type */}
+                        <p className="text-xs text-accent-secondary">{property.roomType}</p>
+
+                        {/* Price */}
+                        <div className="flex items-baseline gap-1 pt-2 border-t border-white/5">
+                          <span className="text-2xl font-bold text-text">${property.price}</span>
+                          <span className="text-muted">/night</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Features */}

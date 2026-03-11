@@ -1,17 +1,30 @@
-import { useState } from 'react'
-import { User, MapPin, Home, Heart, Globe, Users } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { User, MapPin, Home, Heart, Globe, Users, Save, CheckCircle, Edit2, X } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useAuth } from '../context/AuthContext'
+import Toast from '../components/Toast'
 
 const Profile = () => {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const [preferences, setPreferences] = useState({
-    favoriteDestinations: ['Thailand', 'Japan', 'Portugal'],
-    preferredRoomTypes: ['Entire apartment', 'Entire house'],
+    favoriteDestinations: [],
+    preferredRoomTypes: [],
     budget: [40, 250],
-    amenities: ['wifi', 'kitchen', 'ac', 'pool']
+    amenities: []
   })
   const [budgetError, setBudgetError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [toast, setToast] = useState(null)
+  const [hasChanges, setHasChanges] = useState(false)
+  const [initialPreferences, setInitialPreferences] = useState(null)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [accountForm, setAccountForm] = useState({
+    name: '',
+    email: ''
+  })
+  const [accountErrors, setAccountErrors] = useState({})
+  const [savingAccount, setSavingAccount] = useState(false)
 
   const roomTypeOptions = [
     { id: 'apartment', label: 'Entire Apartment' },
@@ -40,6 +53,82 @@ const Profile = () => {
     { label: 'Reviews Given', value: '11' }
   ]
 
+  // Load user profile and preferences on component mount
+  useEffect(() => {
+    // Initialize account form with current user data
+    if (user) {
+      setAccountForm({
+        name: user.name || '',
+        email: user.email || ''
+      })
+    }
+    
+    // Set initial preferences with demo data
+    const initialPrefs = {
+      favoriteDestinations: ['Bangkok', 'Tokyo', 'Lisbon', 'Mexico City', 'Barcelona', 'Rome'],
+      preferredRoomTypes: ['Entire apartment', 'Entire house'],
+      budget: [40, 250],
+      amenities: ['wifi', 'kitchen', 'ac', 'pool']
+    }
+    
+    setPreferences(initialPrefs)
+    setInitialPreferences(JSON.parse(JSON.stringify(initialPrefs)))
+  }, [user])
+
+
+  const handleSaveAccount = async () => {
+    setAccountErrors({})
+    
+    // Basic validation
+    const errors = {}
+    if (!accountForm.name.trim()) {
+      errors.name = 'Name is required'
+    }
+    if (!accountForm.email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/\S+@\S+\.\S+/.test(accountForm.email)) {
+      errors.email = 'Invalid email format'
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setAccountErrors(errors)
+      return
+    }
+    
+    try {
+      setSavingAccount(true)
+      
+      // Update user context if available
+      if (updateUser) {
+        updateUser({ ...user, name: accountForm.name, email: accountForm.email })
+      }
+      
+      setIsEditingProfile(false)
+      
+      setToast({
+        message: 'Profile updated successfully!',
+        type: 'success'
+      })
+    } catch (error) {
+      console.error('Failed to update account:', error)
+      setToast({
+        message: error.message || 'Failed to update profile',
+        type: 'error'
+      })
+    } finally {
+      setSavingAccount(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditingProfile(false)
+    setAccountForm({
+      name: user?.name || '',
+      email: user?.email || ''
+    })
+    setAccountErrors({})
+  }
+
   const validateBudgetRange = (min, max) => {
     if (min >= max) {
       setBudgetError('Maximum budget must be greater than minimum budget')
@@ -60,6 +149,7 @@ const Profile = () => {
     }))
     
     validateBudgetRange(newMin, currentMax)
+    checkForChanges()
   }
 
   const handleMaxBudgetChange = (e) => {
@@ -72,6 +162,7 @@ const Profile = () => {
     }))
     
     validateBudgetRange(currentMin, newMax)
+    checkForChanges()
   }
 
   const toggleAmenity = (id) => {
@@ -81,6 +172,7 @@ const Profile = () => {
         ? prev.amenities.filter(a => a !== id)
         : [...prev.amenities, id]
     }))
+    checkForChanges()
   }
 
   const toggleDestination = (dest) => {
@@ -90,6 +182,44 @@ const Profile = () => {
         ? prev.favoriteDestinations.filter(d => d !== dest)
         : [...prev.favoriteDestinations, dest]
     }))
+    checkForChanges()
+  }
+
+  const toggleRoomType = (roomType) => {
+    setPreferences(prev => ({
+      ...prev,
+      preferredRoomTypes: prev.preferredRoomTypes.includes(roomType)
+        ? prev.preferredRoomTypes.filter(r => r !== roomType)
+        : [...prev.preferredRoomTypes, roomType]
+    }))
+    checkForChanges()
+  }
+
+  const checkForChanges = () => {
+    if (!initialPreferences) return
+    
+    const current = JSON.stringify(preferences)
+    const initial = JSON.stringify(initialPreferences)
+    setHasChanges(current !== initial)
+  }
+
+  const handleSavePreferences = async () => {
+    if (budgetError) {
+      setToast({
+        message: 'Please fix validation errors before saving',
+        type: 'error'
+      })
+      return
+    }
+
+    // Update initial preferences to reflect saved state
+    setInitialPreferences(JSON.parse(JSON.stringify(preferences)))
+    setHasChanges(false)
+    
+    setToast({
+      message: 'Preferences saved successfully!',
+      type: 'success'
+    })
   }
 
   return (
@@ -102,7 +232,14 @@ const Profile = () => {
 
       <Navbar />
 
-      <main className="relative z-10">
+      {loading ? (
+        <main className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-accent-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-text">Loading profile...</p>
+          </div>
+        </main>
+      ) : (
         <div className="max-w-6xl mx-auto px-4 py-12">
           {/* User Header */}
           <div className="card-glass p-8 mb-8 animate-fade-in">
@@ -111,9 +248,81 @@ const Profile = () => {
                 <User className="w-10 h-10 text-white" />
               </div>
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-text mb-2">{user?.name}</h1>
-                <p className="text-muted mb-4">{user?.email}</p>
-                <button className="btn-secondary text-sm">Edit Profile</button>
+                {isEditingProfile ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-text block mb-2">Name</label>
+                      <input
+                        type="text"
+                        value={accountForm.name}
+                        onChange={(e) => setAccountForm(prev => ({ ...prev, name: e.target.value }))}
+                        className={`input-glass w-full ${
+                          accountErrors.name ? 'border-red-500 focus:border-red-500' : ''
+                        }`}
+                        placeholder="Enter your name"
+                      />
+                      {accountErrors.name && (
+                        <p className="text-xs text-red-500 mt-1">{accountErrors.name}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-text block mb-2">Email</label>
+                      <input
+                        type="email"
+                        value={accountForm.email}
+                        onChange={(e) => setAccountForm(prev => ({ ...prev, email: e.target.value }))}
+                        className={`input-glass w-full ${
+                          accountErrors.email ? 'border-red-500 focus:border-red-500' : ''
+                        }`}
+                        placeholder="Enter your email"
+                      />
+                      {accountErrors.email && (
+                        <p className="text-xs text-red-500 mt-1">{accountErrors.email}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleSaveAccount}
+                        disabled={savingAccount}
+                        className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {savingAccount ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            Save
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        disabled={savingAccount}
+                        className="btn-secondary text-sm flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <h1 className="text-3xl font-bold text-text mb-2">{user?.name}</h1>
+                    <p className="text-muted mb-4">{user?.email}</p>
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => setIsEditingProfile(true)}
+                        className="btn-secondary text-sm flex items-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Edit Profile
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -140,7 +349,7 @@ const Profile = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {['Thailand', 'Japan', 'Portugal', 'Mexico', 'Spain', 'Italy'].map((dest) => (
+                  {['Bangkok', 'Tokyo', 'Lisbon', 'Mexico City', 'Barcelona', 'Rome'].map((dest) => (
                     <button
                       key={dest}
                       onClick={() => toggleDestination(dest)}
@@ -176,6 +385,7 @@ const Profile = () => {
                   {roomTypeOptions.map((room) => (
                     <button
                       key={room.id}
+                      onClick={() => toggleRoomType(room.label)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                         preferences.preferredRoomTypes.includes(room.label)
                           ? 'bg-accent-primary/20 border border-accent-primary text-accent-primary'
@@ -280,10 +490,43 @@ const Profile = () => {
 
           {/* Actions */}
           <div className="flex justify-center mt-8 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <button className="btn-primary">Save Preferences</button>
+            <button
+              onClick={handleSavePreferences}
+              disabled={!hasChanges || saving || loading}
+              className={`btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                hasChanges && !saving && !loading ? 'animate-pulse' : ''
+              }`}
+            >
+              {saving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </>
+              ) : hasChanges ? (
+                <>
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  All Saved
+                </>
+              )}
+            </button>
           </div>
         </div>
-      </main>
+      )}
+
+      {/* Toast Notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          duration={3000}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   )
 }

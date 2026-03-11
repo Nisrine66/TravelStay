@@ -10,6 +10,12 @@ export const ENDPOINTS = {
   LOGOUT: '/api/logout',
   ME: '/api/user',
 
+  // Profile
+  PROFILE: '/api/profile',
+  PROFILE_PREFERENCES: '/api/profile/preferences',
+  PROFILE_ACCOUNT: '/api/profile/account',
+  PROFILE_PASSWORD: '/api/profile/password',
+
   // Email Verification
   EMAIL_VERIFY: '/api/email/verify',
   VERIFICATION_NOTIFICATION: '/api/email/verification-notification',

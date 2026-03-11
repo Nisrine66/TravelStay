@@ -4,6 +4,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Http\Controllers\AIController;
+
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -21,3 +23,7 @@ Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth:sanctum');
+
+Route::post('/predict-price', [AIController::class, 'predictPrice']);
+Route::post('/recommend', [AIController::class, 'recommend']);
+Route::post('/destination', [AIController::class, 'destination']);

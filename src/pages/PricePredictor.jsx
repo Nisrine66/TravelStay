@@ -2,6 +2,22 @@ import { useState } from 'react'
 import { Brain, Zap, TrendingUp } from 'lucide-react'
 import Navbar from '../components/Navbar'
 
+const CITY_COORDS = {
+  barcelona: { latitude: 41.38, longitude: 2.17 },
+  edinburgh: { latitude: 55.95, longitude: -3.19 },
+  london:    { latitude: 51.50, longitude: -0.12 },
+  lyon:      { latitude: 45.75, longitude: 4.83 },
+  madrid:    { latitude: 40.41, longitude: -3.70 },
+  paris:     { latitude: 48.85, longitude: 2.35 },
+}
+
+const ROOM_TYPE_MAP = {
+  entire:  'Entire home/apt',
+  private: 'Private room',
+  shared:  'Shared room',
+  hotel:   'Hotel room',
+}
+
 const PricePredictor = () => {
   const [formData, setFormData] = useState({
     location: '',
@@ -14,28 +30,29 @@ const PricePredictor = () => {
   const [errors, setErrors] = useState({})
   const [prediction, setPrediction] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [apiError, setApiError] = useState(null)
 
   const roomTypes = [
-    { value: 'entire', label: 'Entire Place' },
+    { value: 'entire',  label: 'Entire Place' },
     { value: 'private', label: 'Private Room' },
-    { value: 'shared', label: 'Shared Room' }
+    { value: 'shared',  label: 'Shared Room' },
+    { value: 'hotel',   label: 'Hotel Room' },
   ]
 
   const allAmenities = [
-    { id: 'wifi', label: 'WiFi' },
+    { id: 'wifi',    label: 'WiFi' },
     { id: 'kitchen', label: 'Kitchen' },
-    { id: 'ac', label: 'Air Conditioning' },
+    { id: 'ac',      label: 'Air Conditioning' },
     { id: 'heating', label: 'Heating' },
-    { id: 'pool', label: 'Pool' },
-    { id: 'gym', label: 'Gym' },
+    { id: 'pool',    label: 'Pool' },
+    { id: 'gym',     label: 'Gym' },
     { id: 'parking', label: 'Parking' },
-    { id: 'washer', label: 'Washer' }
+    { id: 'washer',  label: 'Washer' },
   ]
 
   const validateForm = () => {
     const newErrors = {}
-    
-    // Location validation - should only be characters, no numbers
+
     if (!formData.location.trim()) {
       newErrors.location = 'Location is required'
     } else if (/\d/.test(formData.location)) {
@@ -44,48 +61,31 @@ const PricePredictor = () => {
       newErrors.location = 'Location should only contain letters, spaces, commas, dots and hyphens'
     } else if (formData.location.trim().length < 2) {
       newErrors.location = 'Location must be at least 2 characters'
+    } else if (!CITY_COORDS[formData.location.trim().toLowerCase()]) {
+      newErrors.location = 'Available cities: Barcelona, Edinburgh, London, Lyon, Madrid, Paris'
     }
-    
-    // Guests validation - should be between 1 and 20
+
     const guests = parseInt(formData.guests)
-    if (!guests || guests <= 0) {
-      newErrors.guests = 'Number of guests must be greater than 0'
-    } else if (guests > 20) {
-      newErrors.guests = 'Number of guests cannot exceed 20'
-    }
-    
-    // Bedrooms validation - should be between 1 and 20
+    if (!guests || guests <= 0)  newErrors.guests = 'Number of guests must be greater than 0'
+    else if (guests > 20)        newErrors.guests = 'Number of guests cannot exceed 20'
+
     const bedrooms = parseInt(formData.bedrooms)
-    if (!bedrooms || bedrooms <= 0) {
-      newErrors.bedrooms = 'Number of bedrooms must be greater than 0'
-    } else if (bedrooms > 20) {
-      newErrors.bedrooms = 'Number of bedrooms cannot exceed 20'
-    }
-    
-    // Bathrooms validation - should be between 1 and 10
+    if (!bedrooms || bedrooms <= 0) newErrors.bedrooms = 'Number of bedrooms must be greater than 0'
+    else if (bedrooms > 20)         newErrors.bedrooms = 'Number of bedrooms cannot exceed 20'
+
     const bathrooms = parseInt(formData.bathrooms)
-    if (!bathrooms || bathrooms <= 0) {
-      newErrors.bathrooms = 'Number of bathrooms must be greater than 0'
-    } else if (bathrooms > 10) {
-      newErrors.bathrooms = 'Number of bathrooms cannot exceed 10'
-    }
-    
+    if (!bathrooms || bathrooms <= 0) newErrors.bathrooms = 'Number of bathrooms must be greater than 0'
+    else if (bathrooms > 10)          newErrors.bathrooms = 'Number of bathrooms cannot exceed 10'
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    // Clear error for this field when user starts typing
+    setFormData(prev => ({ ...prev, [name]: value }))
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }))
+      setErrors(prev => ({ ...prev, [name]: '' }))
     }
   }
 
@@ -100,38 +100,79 @@ const PricePredictor = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    if (!validateForm()) {
-      return
-    }
-    
+    if (!validateForm()) return
+
     setLoading(true)
+    setApiError(null)
+    setPrediction(null)
 
-    // Simulate API call
-    setTimeout(() => {
-      const basePrice = {
-        'entire': 120,
-        'private': 60,
-        'shared': 30
-      }[formData.roomType]
+    try {
+      const city      = formData.location.trim().toLowerCase()
+      const coords    = CITY_COORDS[city]
+      const roomType  = ROOM_TYPE_MAP[formData.roomType]
+      const accommodates = parseInt(formData.guests)
+      const bedrooms     = parseInt(formData.bedrooms)
+      const bathrooms    = parseInt(formData.bathrooms)
 
-      const guestMultiplier = Math.max(1, parseInt(formData.guests) / 2)
-      const facilitiesBonus = formData.amenities.length * 5
-      const estimatedPrice = Math.round(basePrice * guestMultiplier + facilitiesBonus)
+      const payload = {
+        city,
+        accommodates,
+        bedrooms,
+        bathrooms,
+        latitude:             coords.latitude,
+        longitude:            coords.longitude,
+        review_scores_rating: 4.5,
+        room_type:            roomType,
+      }
 
-      setPrediction({
-        estimatedPrice,
-        lowPrice: Math.round(estimatedPrice * 0.85),
-        highPrice: Math.round(estimatedPrice * 1.15),
-        confidence: 92
+      console.log("📤 Sending to predict-price:", payload)
+
+      const response = await fetch('http://127.0.0.1:8000/api/predict-price', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
       })
-      setLoading(false)
-    }, 2000)
+
+      const result = await response.json()
+      console.log("📥 predict-price response:", result)
+
+      if (result.error) {
+        setApiError(result.error)
+      } else {
+        const estimatedPrice = result.predicted_price
+        setPrediction({
+          estimatedPrice,
+          lowPrice:   Math.round(estimatedPrice * 0.85),
+          highPrice:  Math.round(estimatedPrice * 1.15),
+          confidence: 87,
+          city:       formData.location,
+          roomType:   roomType,
+        })
+      }
+    } catch (error) {
+      console.error("❌ API error:", error)
+      setApiError('Could not connect to the AI service. Make sure Flask is running.')
+    }
+
+    setLoading(false)
+  }
+
+  const handleReset = () => {
+    setPrediction(null)
+    setApiError(null)
+    setErrors({})
+    setFormData({
+      location: '',
+      roomType: 'entire',
+      guests: '2',
+      bedrooms: '1',
+      bathrooms: '1',
+      amenities: ['wifi', 'kitchen']
+    })
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-bg via-dark-surface to-dark-card">
-      {/* Animated background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent-secondary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
         <div className="absolute top-0 left-0 w-96 h-96 bg-accent-primary/20 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style={{ animationDelay: '2s' }}></div>
@@ -158,20 +199,18 @@ const PricePredictor = () => {
               <form onSubmit={handleSubmit} className="card-glass p-8 space-y-6">
                 {/* Location */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-text">Location</label>
+                  <label className="text-sm font-medium text-text">
+                    City <span className="text-muted text-xs">(Barcelona, Edinburgh, London, Lyon, Madrid, Paris)</span>
+                  </label>
                   <input
                     type="text"
                     name="location"
                     value={formData.location}
                     onChange={handleChange}
-                    placeholder="e.g., New York, USA"
-                    className={`input-glass w-full ${
-                      errors.location ? 'border-red-500 focus:border-red-500' : ''
-                    }`}
+                    placeholder="e.g., Paris"
+                    className={`input-glass w-full ${errors.location ? 'border-red-500 focus:border-red-500' : ''}`}
                   />
-                  {errors.location && (
-                    <p className="text-xs text-red-500 mt-1">{errors.location}</p>
-                  )}
+                  {errors.location && <p className="text-xs text-red-500 mt-1">{errors.location}</p>}
                 </div>
 
                 {/* Room Type */}
@@ -198,15 +237,10 @@ const PricePredictor = () => {
                       name="guests"
                       value={formData.guests}
                       onChange={handleChange}
-                      min="1"
-                      max="20"
-                      className={`input-glass w-full ${
-                        errors.guests ? 'border-red-500 focus:border-red-500' : ''
-                      }`}
+                      min="1" max="20"
+                      className={`input-glass w-full ${errors.guests ? 'border-red-500' : ''}`}
                     />
-                    {errors.guests && (
-                      <p className="text-xs text-red-500 mt-1">{errors.guests}</p>
-                    )}
+                    {errors.guests && <p className="text-xs text-red-500 mt-1">{errors.guests}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-text">Bedrooms</label>
@@ -215,15 +249,10 @@ const PricePredictor = () => {
                       name="bedrooms"
                       value={formData.bedrooms}
                       onChange={handleChange}
-                      min="1"
-                      max="20"
-                      className={`input-glass w-full ${
-                        errors.bedrooms ? 'border-red-500 focus:border-red-500' : ''
-                      }`}
+                      min="1" max="20"
+                      className={`input-glass w-full ${errors.bedrooms ? 'border-red-500' : ''}`}
                     />
-                    {errors.bedrooms && (
-                      <p className="text-xs text-red-500 mt-1">{errors.bedrooms}</p>
-                    )}
+                    {errors.bedrooms && <p className="text-xs text-red-500 mt-1">{errors.bedrooms}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-text">Bathrooms</label>
@@ -232,15 +261,10 @@ const PricePredictor = () => {
                       name="bathrooms"
                       value={formData.bathrooms}
                       onChange={handleChange}
-                      min="1"
-                      max="10"
-                      className={`input-glass w-full ${
-                        errors.bathrooms ? 'border-red-500 focus:border-red-500' : ''
-                      }`}
+                      min="1" max="10"
+                      className={`input-glass w-full ${errors.bathrooms ? 'border-red-500' : ''}`}
                     />
-                    {errors.bathrooms && (
-                      <p className="text-xs text-red-500 mt-1">{errors.bathrooms}</p>
-                    )}
+                    {errors.bathrooms && <p className="text-xs text-red-500 mt-1">{errors.bathrooms}</p>}
                   </div>
                 </div>
 
@@ -265,10 +289,10 @@ const PricePredictor = () => {
                   </div>
                 </div>
 
-                {/* Submit Button */}
+                {/* Submit */}
                 <button
                   type="submit"
-                  disabled={loading || !formData.location || Object.keys(errors).length > 0}
+                  disabled={loading || !formData.location || Object.keys(errors).filter(k => errors[k]).length > 0}
                   className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Zap className="w-4 h-4" />
@@ -277,14 +301,42 @@ const PricePredictor = () => {
               </form>
             </div>
 
-            {/* Prediction Result */}
+            {/* Result Panel */}
             <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-              {prediction ? (
+
+              {/* ── Error state ── */}
+              {apiError && (
+                <div className="card-glass p-8 h-full flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
+                      <Brain className="w-6 h-6 text-red-400" />
+                    </div>
+                    <p className="text-red-400 text-sm">{apiError}</p>
+                    <button onClick={handleReset} className="btn-secondary w-full text-sm">Try Again</button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Loading state ── */}
+              {loading && !apiError && (
+                <div className="card-glass p-8 h-full flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-accent-primary/10 flex items-center justify-center mx-auto animate-pulse">
+                      <Brain className="w-6 h-6 text-accent-primary" />
+                    </div>
+                    <p className="text-muted text-sm">Analyzing your property...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Prediction result ── */}
+              {prediction && !loading && (
                 <div className="card-glass p-8 space-y-6 h-full">
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <p className="text-sm text-muted">Estimated Nightly Rate</p>
+                    <p className="text-xs text-muted capitalize">{prediction.city} · {prediction.roomType}</p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-bold text-gradient">${prediction.estimatedPrice}</span>
+                      <span className="text-5xl font-bold text-gradient">€{prediction.estimatedPrice}</span>
                       <span className="text-muted">/night</span>
                     </div>
                   </div>
@@ -295,12 +347,12 @@ const PricePredictor = () => {
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted">Low</span>
-                        <span className="text-lg font-semibold text-text">${prediction.lowPrice}</span>
+                        <span className="text-lg font-semibold text-text">€{prediction.lowPrice}</span>
                       </div>
                       <div className="h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-muted">High</span>
-                        <span className="text-lg font-semibold text-text">${prediction.highPrice}</span>
+                        <span className="text-lg font-semibold text-text">€{prediction.highPrice}</span>
                       </div>
                     </div>
                   </div>
@@ -319,37 +371,23 @@ const PricePredictor = () => {
                     </div>
                   </div>
 
-                  {/* Info Cards */}
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3 bg-accent-primary/10 border border-accent-primary/20 rounded-lg p-3">
-                      <TrendingUp className="w-5 h-5 text-accent-primary flex-shrink-0 mt-0.5" />
-                      <div className="text-sm">
-                        <p className="text-text font-medium">Market Competitive</p>
-                        <p className="text-muted text-xs">Price is 8% above average for your area</p>
-                      </div>
+                  {/* Info */}
+                  <div className="flex items-start gap-3 bg-accent-primary/10 border border-accent-primary/20 rounded-lg p-3">
+                    <TrendingUp className="w-5 h-5 text-accent-primary flex-shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="text-text font-medium">Market Competitive</p>
+                      <p className="text-muted text-xs">Based on real Airbnb listings in {prediction.city}</p>
                     </div>
                   </div>
 
-                  {/* Reset Button */}
-                  <button
-                    onClick={() => {
-                      setPrediction(null)
-                      setErrors({})
-                      setFormData({
-                        location: '',
-                        roomType: 'entire',
-                        guests: '2',
-                        bedrooms: '1',
-                        bathrooms: '1',
-                        amenities: ['wifi', 'kitchen']
-                      })
-                    }}
-                    className="btn-secondary w-full text-sm"
-                  >
+                  <button onClick={handleReset} className="btn-secondary w-full text-sm">
                     Try Another Property
                   </button>
                 </div>
-              ) : (
+              )}
+
+              {/* ── Empty state ── */}
+              {!prediction && !loading && !apiError && (
                 <div className="card-glass p-8 h-full flex items-center justify-center">
                   <div className="text-center space-y-4">
                     <div className="w-12 h-12 rounded-full bg-accent-primary/10 flex items-center justify-center mx-auto">
@@ -359,6 +397,7 @@ const PricePredictor = () => {
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         </div>

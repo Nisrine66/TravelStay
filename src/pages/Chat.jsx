@@ -13,15 +13,15 @@ const FLOWS = {
     ]
   },
   // Price flow
-  price_city: { message: "Which city are you interested in?", field: 'city', next: 'price_accommodates' },
+  price_city:         { message: "Which city are you interested in?", field: 'city', next: 'price_accommodates' },
   price_accommodates: { message: "How many guests?", field: 'accommodates', next: 'price_bedrooms' },
-  price_bedrooms: { message: "How many bedrooms do you need?", field: 'bedrooms', next: 'price_bathrooms' },
-  price_bathrooms: { message: "How many bathrooms?", field: 'bathrooms', next: 'price_submit' },
+  price_bedrooms:     { message: "How many bedrooms do you need?", field: 'bedrooms', next: 'price_bathrooms' },
+  price_bathrooms:    { message: "How many bathrooms?", field: 'bathrooms', next: 'price_submit' },
   // Recommend flow
-  recommend_price: { message: "What's your budget per night (€)?", field: 'price', next: 'recommend_accommodates' },
+  recommend_price:        { message: "What's your budget per night (€)?", field: 'price', next: 'recommend_accommodates' },
   recommend_accommodates: { message: "How many guests?", field: 'accommodates', next: 'recommend_bedrooms' },
-  recommend_bedrooms: { message: "How many bedrooms?", field: 'bedrooms', next: 'recommend_bathrooms' },
-  recommend_bathrooms: { message: "How many bathrooms?", field: 'bathrooms', next: 'recommend_submit' },
+  recommend_bedrooms:     { message: "How many bedrooms?", field: 'bedrooms', next: 'recommend_bathrooms' },
+  recommend_bathrooms:    { message: "How many bathrooms?", field: 'bathrooms', next: 'recommend_submit' },
   // Destination flow
   destination_city: { message: "Which city do you currently like?", field: 'city', next: 'destination_submit' },
 }
@@ -36,50 +36,39 @@ const CITY_COORDS = {
 }
 
 const Chat = () => {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages]     = useState([])
   const [inputMessage, setInputMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [step, setStep] = useState('start')
-  const [userData, setUserData] = useState({})
+  const [isLoading, setIsLoading]   = useState(false)
+  const [step, setStep]             = useState('start')
+  const [userData, setUserData]     = useState({})
   const bottomRef = useRef(null)
 
-  // Auto scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Start the conversation
+  const hasStarted = useRef(false)
+
   useEffect(() => {
+    if (hasStarted.current) return
+    hasStarted.current = true
     addBotMessage(FLOWS.start.message, FLOWS.start.options)
   }, [])
 
   const addBotMessage = (content, options = null) => {
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      type: 'bot',
-      content,
-      options
-    }])
+    setMessages(prev => [...prev, { id: Date.now(), type: 'bot', content, options }])
   }
 
   const addUserMessage = (content) => {
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      type: 'user',
-      content
-    }])
+    setMessages(prev => [...prev, { id: Date.now(), type: 'user', content }])
   }
 
-  // User clicks an option button
   const handleOption = (option) => {
     addUserMessage(option.label)
     setStep(option.next)
-    setTimeout(() => {
-      addBotMessage(FLOWS[option.next].message)
-    }, 500)
+    setTimeout(() => addBotMessage(FLOWS[option.next].message), 500)
   }
 
-  // User types a text answer
   const handleSendMessage = async (e) => {
     e.preventDefault()
     if (!inputMessage.trim() || isLoading) return
@@ -98,9 +87,7 @@ const Chat = () => {
       await handleSubmit(nextStep, newUserData)
     } else {
       setStep(nextStep)
-      setTimeout(() => {
-        addBotMessage(FLOWS[nextStep].message)
-      }, 500)
+      setTimeout(() => addBotMessage(FLOWS[nextStep].message), 500)
     }
   }
 
@@ -111,11 +98,11 @@ const Chat = () => {
       let botContent = ''
 
       if (submitStep === 'price_submit') {
-        const city = data.city?.toLowerCase() || 'paris'
+        const city   = data.city?.toLowerCase().trim() || 'paris'
         const coords = CITY_COORDS[city] || null
 
         if (!coords) {
-          addBotMessage(`Sorry, I only have data for: Barcelona, Edinburgh, London, Lyon, Madrid and Paris. Please try again! 🌍`)
+          addBotMessage(`Sorry, this city doesn't exist in my datas. 🌍`)
           setTimeout(() => {
             setUserData({})
             setStep('start')
@@ -126,59 +113,91 @@ const Chat = () => {
         }
 
         const accommodates = parseInt(data.accommodates) || 2
-        const bedrooms = parseInt(data.bedrooms) || 1
-        const bathrooms = parseInt(data.bathrooms) || 1
+        const bedrooms     = parseInt(data.bedrooms)     || 1
+        const bathrooms    = parseInt(data.bathrooms)    || 1
+
+        const payload = {
+          city,                          // ✅ city is now sent!
+          accommodates,
+          bedrooms,
+          bathrooms,
+          latitude:             coords.latitude,
+          longitude:            coords.longitude,
+          review_scores_rating: 4.5,
+          room_type:            'Entire home/apt'
+        }
+
+        console.log("📤 Sending to predict-price:", payload)
 
         const response = await fetch('http://127.0.0.1:8000/api/predict-price', {
-          method: 'POST',
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            price: 150,  // average price as reference
-            accommodates,
-            bedrooms,
-            bathrooms,
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-            review_scores_rating: 4.5,
-            room_type: 'Entire home/apt'
-          })
+          body:    JSON.stringify(payload)
         })
+
         const result = await response.json()
-        botContent = `Based on your preferences in ${data.city}, the estimated price is €${result.predicted_price} per night! 🏠`
+        console.log("📥 predict-price response:", result)
+
+        if (result.error) {
+          botContent = `Sorry, I couldn't estimate the price. Error: ${result.error}`
+        } else {
+          botContent = `Based on your preferences in ${data.city}, the estimated price is €${result.predicted_price} per night! 🏠`
+        }
+
       } else if (submitStep === 'recommend_submit') {
-        const price = parseFloat(data.price) || 100
+        const price        = parseFloat(data.price)      || 100
         const accommodates = parseInt(data.accommodates) || 2
-        const bedrooms = parseInt(data.bedrooms) || 1
-        const bathrooms = parseInt(data.bathrooms) || 1
+        const bedrooms     = parseInt(data.bedrooms)     || 1
+        const bathrooms    = parseInt(data.bathrooms)    || 1
+
+        const payload = {
+          price,
+          accommodates,
+          bedrooms,
+          bathrooms,
+          review_scores_rating: 4.5,
+          comfort_score:        bedrooms + bathrooms,
+          price_per_person:     price / accommodates
+        }
+
+        console.log("📤 Sending to recommend:", payload)
 
         const response = await fetch('http://127.0.0.1:8000/api/recommend', {
-          method: 'POST',
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            price,
-            accommodates,
-            bedrooms,
-            bathrooms,
-            review_scores_rating: 4.5,
-            comfort_score: bedrooms + bathrooms,
-            price_per_person: price / accommodates
-          })
+          body:    JSON.stringify(payload)
         })
+
         const result = await response.json()
-        const listingsList = result.listings.map((l, i) =>
-          `${i + 1}. €${l.price}/night · ${l.bedrooms} bed · ${l.bathrooms} bath · ${l.accommodates} guests · ⭐${l.rating}`
-        ).join('\n')
-        botContent = `Here are 5 listings that match your preferences:\n\n${listingsList}`
+        console.log("📥 recommend response:", result)
+
+        if (result.error) {
+          botContent = `Sorry, I couldn't find listings. Error: ${result.error}`
+        } else {
+          const listingsList = result.listings.map((l, i) =>
+            `${i + 1}. 🏠 ${l.name} — ${l.city}\n    €${l.price}/night · ${l.bedrooms} bed · ${l.bathrooms} bath · ${l.accommodates} guests · ⭐${l.rating}`
+          ).join('\n\n')
+          botContent = `Here are 5 listings that match your preferences:\n\n${listingsList}`
+        }
 
       } else if (submitStep === 'destination_submit') {
+        const payload = { city: data.city }
+
+        console.log("📤 Sending to destination:", payload)
+
         const response = await fetch('http://127.0.0.1:8000/api/destination', {
-          method: 'POST',
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ city: data.city })
+          body:    JSON.stringify(payload)
         })
+
         const result = await response.json()
-        if (result.similar_cities && result.similar_cities.length > 0) {
-          botContent = `Since you like ${data.city}, you might also enjoy: ${result.similar_cities.join(', ')}! 🌍`
+        console.log("📥 destination response:", result)
+
+        if (result.error) {
+          botContent = `Sorry, I couldn't find similar cities. Error: ${result.error}`
+        } else if (result.similar_cities && result.similar_cities.length > 0) {
+          botContent = `Good choice! Since you like ${data.city}, I'm pretty sure you might also enjoy: ${result.similar_cities.join(', ')}! 🌍 GIVE IT A HIT!`
         } else {
           botContent = `${data.city} is unique! It's in its own category of destinations.`
         }
@@ -186,7 +205,6 @@ const Chat = () => {
 
       addBotMessage(botContent)
 
-      // Ask if user wants to continue
       setTimeout(() => {
         setUserData({})
         setStep('start')
@@ -194,6 +212,7 @@ const Chat = () => {
       }, 1000)
 
     } catch (error) {
+      console.error("❌ Connection error:", error)
       addBotMessage('Sorry, I could not connect to the AI service. Please try again.')
     }
 
@@ -227,11 +246,10 @@ const Chat = () => {
                     <Bot className="w-4 h-4 text-white" />
                   </div>
                 )}
-                <div className={`max-w-[70%] flex flex-col gap-2`}>
+                <div className="max-w-[70%] flex flex-col gap-2">
                   <div className={`p-3 rounded-2xl ${message.type === 'user' ? 'bg-accent-primary text-white' : 'bg-dark-surface/50 text-text border border-white/10'}`}>
                     <p className="text-sm whitespace-pre-line">{message.content}</p>
                   </div>
-                  {/* Option buttons */}
                   {message.options && (
                     <div className="flex flex-col gap-2">
                       {message.options.map((option, i) => (
